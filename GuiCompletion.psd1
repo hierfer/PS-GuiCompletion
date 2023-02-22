@@ -7,7 +7,7 @@
 	Description = 'GUI-style tab-completion menu for PowerShell.'
 
 	RequiredAssemblies = @('System.Drawing')
-	FunctionsToExport = @('Install-GuiCompletion', 'Invoke-GuiCompletion')
+	FunctionsToExport = @('Install-GuiCompletion1', 'Invoke-GuiCompletion1')
 	CmdletsToExport = @()
 	VariablesToExport = @('GuiCompletionConfig')
 	AliasesToExport = @()

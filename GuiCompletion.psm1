@@ -4,13 +4,13 @@ $UI = $Host.UI.RawUI
 . $PSScriptRoot\scripts\ConsoleLib.ps1
 . $PSScriptRoot\scripts\GuiCompletionConfig.ps1
 
-function Install-GuiCompletion($Key = 'Ctrl+Spacebar') {
+function Install-GuiCompletion1($Key = 'Ctrl+Spacebar') {
 	Set-PSReadLineKeyHandler -Key $Key -ScriptBlock {
-		Invoke-GuiCompletion
+		Invoke-GuiCompletion1
 	}
 }
 
-function Invoke-GuiCompletion {
+function Invoke-GuiCompletion1 {
 	for() {
 		# get input buffer state
 		$buffer = ''
@@ -30,7 +30,7 @@ function Invoke-GuiCompletion {
 		if (!$completion.CompletionMatches) {
 			return
 		}
-
+        # 前面是readline带的功能。下面是这个completion的核心。
 		# show the menu
 		$Repeat = $false
 		$replacement = Get-ConsoleList -Content $completion.CompletionMatches -Repeat ([ref]$Repeat)
@@ -45,4 +45,4 @@ function Invoke-GuiCompletion {
 	}
 }
 
-Export-ModuleMember -Function Install-GuiCompletion, Invoke-GuiCompletion -Variable GuiCompletionConfig
+Export-ModuleMember -Function Install-GuiCompletion1, Invoke-GuiCompletion1 -Variable GuiCompletionConfig

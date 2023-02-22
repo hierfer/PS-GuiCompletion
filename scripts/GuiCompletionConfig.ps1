@@ -25,4 +25,6 @@ New-Variable -Name GuiCompletionConfig -Option ReadOnly -Value ([PSCustomObject]
 
 	CustomComplete = $true
 	CustomCompletionChars = ' ()[]:'
+
+    ListRollover = $false
 })
