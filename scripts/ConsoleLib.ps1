@@ -441,14 +441,15 @@ function Move-List(
 	$BufferCell.BackgroundColor = $GuiCompletionConfig.Colors.BackColor
 	$UI.ScrollBufferContents($Rectangle, $Position, $Rectangle, $BufferCell)
 }
-
+# NEWW 这个函数如何操纵GUI？自己写的功能，还是pw自带功能？
 function Set-Selection(
-	[int]$X
+	[int]$X # 可能选项可以是横竖两排的，但目前的实现固定一排
 	,
-	[int]$Y
+	[int]$Y # 第几行
 	,
-	[int]$Width
+	[int]$Width # 菜单宽度，这个x有其他值时可能有达意义，目前还是一个config的固定值
 	,
+    # 下面是对应行的颜色设置
 	[System.ConsoleColor]
 	$ForegroundColor
 	,
@@ -466,6 +467,7 @@ function Set-Selection(
 		$ForegroundColor,
 		$BackgroundColor
 	)
+    # 这是一个pw函数欸
 	$UI.SetBufferContents($Position, $LineBuffer)
 }
 # NEWW 这个函数似切换的核心
@@ -473,48 +475,86 @@ function Move-Selection(
 	[int]$Count
 )
 {
-	$Colors = $GuiCompletionConfig.Colors
-	$SelectedItem = $ListHandle.SelectedItem
-	$Line = $ListHandle.SelectedLine
-	if ($Count -ge 0) {
-		## Down in list
-		if ($SelectedItem -eq ($ListHandle.Items.Count - 1)) {
-            # NEWW 1. 如果已经在底部，就不动。
-			return
-		}
-		$One = 1
-        # NEWW 2. 如果多次跳转超了，就调整为跳转到目前显示项的最后一项（一次跳多个的就是page down，page up的功能，可推是当前list）。count是整个list的item的数量，FirstItem和LastItem是当前显示列表的index。
-		if ($SelectedItem + $Count -gt $ListHandle.Items.Count - 1) {$Count = $ListHandle.Items.Count - 1 - $SelectedItem}
-        # NEWW 3. 如果当前到了最后一个，move用于指示列表需要更新。
-		if ($SelectedItem -eq $ListHandle.LastItem) {
-			$Move = $true
-		}
-		else {
-			$Move = $false
-			if (($ListHandle.MaxItems - $Line) -lt $Count) {$Count = $ListHandle.MaxItems - $Line}
-		}
-	}
-	else {
+    $Colors = $GuiCompletionConfig.Colors
+    $SelectedItem = $ListHandle.SelectedItem
+    $Line = $ListHandle.SelectedLine
+    echo "ListHandle.SelectedLine is $Line"
+    if ($Count -ge 0) {
+        ## Down in list
+        if ($SelectedItem -eq ($ListHandle.Items.Count - 1)) {
+            # NEWW 1. 如果已经在整个列表底部，就不动。
+            # return
+            $Count = - $ListHandle.Items.Count
+            echo "Count is $Count"
+            # NEWW 2. 这里偷用反向的逻辑，rollover就是在两端条件下变成对向的逻辑（这个理解在目前的实现里不一定对）
+            $One = -1 # QSTT 这是为何？
+            # NEWW 3. 已经在当前列表头，说明需要更改当前列表。
+            if ($SelectedItem -eq $ListHandle.FirstItem) {
+                $Move = $true
+                # NEWW 4. 如果向上移动过于小就设置count为第一个元素（index 0）需要移动的距离，正好移动到第一个。
+                if ($SelectedItem + $Count -lt 0) { $Count = - $SelectedItem }
+            }
+            # NEWW 3. 移动不会超过当前列表，最多设置为到达当前列表第一个的count所需
+            else {
+                $Move = $false
+                if ($Line + $Count -lt 1) { $Count = 1 - $Line }
+            }
+        }
+        else {
+            $One = 1
+            # NEWW 2. 如果多次跳转超了，就调整为跳转到目前显示项的最后一项（一次跳多个的就是page down，page up的功能，可推是当前list）。count是整个list的item的数量，FirstItem和LastItem是当前显示列表的index。
+            if ($SelectedItem + $Count -gt $ListHandle.Items.Count - 1) { $Count = $ListHandle.Items.Count - 1 - $SelectedItem }
+            # NEWW 3. 如果当前到了最后一个，move用于指示列表需要更新。
+            if ($SelectedItem -eq $ListHandle.LastItem) {
+                $Move = $true
+            }
+            else {
+                $Move = $false
+                if (($ListHandle.MaxItems - $Line) -lt $Count) { $Count = $ListHandle.MaxItems - $Line }
+            }
+        }
+    }
+    else {
         # NEWW 1. 如果已经在顶部，也不动。
-		if ($SelectedItem -eq 0) {
-			return
-		}
-		$One = -1 # QSTT 这是为何？
-        # NEWW 3. 还是如果到了当前列表第一个表示当前列表需要变更，如果滚动过头需要保证最多移动到第一个。
-		if ($SelectedItem -eq $ListHandle.FirstItem) {
-			$Move = $true
-			if ($SelectedItem + $Count -lt 0) {$Count = - $SelectedItem}
-		}
-        # NEWW 2. 回退但是不move
-		else {
-			$Move = $false
-			if ($Line + $Count -lt 1) {$Count = 1 - $Line}
-		}
-	}
+        if ($SelectedItem -eq 0) {
+            return
+            # 重点就是当前列表和全部列表的跳转关系
+            # $Count = $ListHandle.MaxItems
+    
+            # $One = 1
+            # # NEWW 2. 如果多次跳转超了，就调整为跳转到目前显示项的最后一项（一次跳多个的就是page down，page up的功能，可推是当前list）。count是整个list的item的数量，FirstItem和LastItem是当前显示列表的index。
+            # if ($SelectedItem + $Count -gt $ListHandle.Items.Count - 1) { $Count = $ListHandle.Items.Count - 1 - $SelectedItem }
+            # # NEWW 3. 如果当前到了最后一个，move用于指示列表需要更新。
+            # if ($SelectedItem -eq $ListHandle.LastItem) {
+            #     $Move = $true
+            # }
+            # else {
+            #     $Move = $false
+            #     if (($ListHandle.MaxItems - $Line) -lt $Count) { $Count = $ListHandle.MaxItems - $Line }
+            # }
+        }
+        else {
+            $One = -1 # QSTT 这是为何？
+            # NEWW 3. 还是如果到了当前列表第一个表示当前列表需要变更，如果滚动过头需要保证最多移动到第一个。
+            if ($SelectedItem -eq $ListHandle.FirstItem) {
+                $Move = $true
+                if ($SelectedItem + $Count -lt 0) { $Count = - $SelectedItem }
+            }
+            # NEWW 2. 回退但是不move
+            else {
+                $Move = $false
+                if ($Line + $Count -lt 1) { $Count = 1 - $Line }
+            }
+        }
+    }
 
+    # NEWW 5. 当然上面所有都只是计算了几个指导菜单移动的值，操作在下方
 	if ($Move) {
+        # NEWW 6. 把当前项的高亮取消——通过设置高亮项函数
 		Set-Selection 1 $Line ($ListHandle.ListConfig.ListWidth - 3) $Colors.TextColor $Colors.BackColor
-		Move-List 1 1 ($ListHandle.ListConfig.ListWidth - 3) ($ListHandle.ListConfig.ListHeight - 2) ( - $Count)
+        # 7. 
+		Move-List 1 1 ($ListHandle.ListConfig.ListWidth - 3) ($ListHandle.ListConfig.ListHeight - 2) ( - $Count )
+        # 8. 移动滑动buffer，move是新list。所以是一页一页移动的。
 		$SelectedItem += $Count
 		$ListHandle.FirstItem += $Count
 		$ListHandle.LastItem += $Count
@@ -532,7 +572,7 @@ function Move-Selection(
 		$null = New-Buffer $LinePosition (New-BufferCellArray $ItemLines $Colors.TextColor $Colors.BackColor)
 		Set-Selection 1 $Line ($ListHandle.ListConfig.ListWidth - 3) $Colors.SelectedTextColor $Colors.SelectedBackColor
 	}
-	else { # NEWW 4. 如果不move改一改现存list的高亮。
+	else { # NEWW 5. 如果不move改一改现存list的高亮。
 		Set-Selection 1 $Line ($ListHandle.ListConfig.ListWidth - 3) $Colors.TextColor $Colors.BackColor
 		$SelectedItem += $Count
 		$Line += $Count
